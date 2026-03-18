@@ -37,10 +37,12 @@ router.post('/login', async function (req, res, next) {
         if (bcrypt.compareSync(password, user.password)) {
             user.loginCount = 0;
             await user.save()
-            //let priK = fs.readFileSync('privateKey.pem')
+            let fs = require('fs');
+            let priK = fs.readFileSync('privateKey.pem');
             let token = jwt.sign({
                 id: user._id
-            }, 'secret', {
+            }, priK, {
+                algorithm: 'RS256',
                 expiresIn: '1d'
             })
             res.send(token)
@@ -64,4 +66,28 @@ router.post('/login', async function (req, res, next) {
 router.get('/me', CheckLogin, function (req, res, next) {
     res.send(req.user)
 })
+
+router.post('/changepassword', CheckLogin, async function (req, res, next) {
+    try {
+        let { oldpassword, newpassword } = req.body;
+        let user = req.user;
+        
+        if (!newpassword || newpassword.length < 6) {
+            return res.status(400).send({ message: "Mật khẩu mới phải từ 6 ký tự trở lên" });
+        }
+        
+        let bcrypt = require('bcrypt');
+        if (!bcrypt.compareSync(oldpassword, user.password)) {
+            return res.status(400).send({ message: "Mật khẩu cũ không đúng" });
+        }
+        
+        user.password = newpassword;
+        await user.save();
+        
+        res.send({ message: "Đổi mật khẩu thành công" });
+    } catch (error) {
+        res.status(500).send({ message: error.message });
+    }
+});
+
 module.exports = router

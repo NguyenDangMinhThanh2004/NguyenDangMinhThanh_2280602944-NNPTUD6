@@ -10,7 +10,9 @@ module.exports = {
                 })
                 return;
             }
-            let result = jwt.verify(token, "secret")
+            let fs = require('fs');
+            let publicKey = fs.readFileSync('publicKey.pem');
+            let result = jwt.verify(token, publicKey, { algorithms: ['RS256'] })
             if (result.exp * 1000 < Date.now()) {
                 res.status(404).send({
                     message: "ban chua dang nhap"
